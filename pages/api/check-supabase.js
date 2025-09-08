@@ -1,12 +1,17 @@
+export const config = { runtime: 'edge' };
+
 import { getSupabaseServer } from '../../lib/supabaseServer';
 
-export default async function handler(req, res) {
+export default async function handler(req) {
   const hasService = !!process.env.SUPABASE_SERVICE_ROLE;
   const hasUrl = !!process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const table = (req.query.table || '').toString();
+  const { searchParams } = new URL(req.url);
+  const table = (searchParams.get('table') || '').toString();
 
   if (!hasUrl) {
-    return res.status(200).json({ ok: false, reason: 'Falta NEXT_PUBLIC_SUPABASE_URL' });
+    return new Response(JSON.stringify({ ok: false, reason: 'Falta NEXT_PUBLIC_SUPABASE_URL' }), {
+      headers: { 'content-type': 'application/json' }
+    });
   }
   const info = { ok: true, hasService, hasUrl };
 
@@ -19,6 +24,7 @@ export default async function handler(req, res) {
       info.sample = { error: String(e) };
     }
   }
-
-  return res.status(200).json(info);
+  return new Response(JSON.stringify(info), {
+    headers: { 'content-type': 'application/json' }
+  });
 }
