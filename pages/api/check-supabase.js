@@ -1,38 +1,46 @@
 export const config = { runtime: 'edge' };
-import { createClient } from '@supabase/supabase-js';
 
 export default async function handler(req) {
   try {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    const service = process.env.SUPABASE_SERVICE_ROLE;
+    const URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const SERVICE = process.env.SUPABASE_SERVICE_ROLE;
 
-    if (!url) throw new Error("Missing SUPABASE URL");
-    if (!anon) throw new Error("Missing ANON KEY");
-    if (!service) throw new Error("Missing SERVICE ROLE");
-
-    const supabase = createClient(url, service);
+    if (!URL) throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL');
+    if (!SERVICE) throw new Error('Missing SUPABASE_SERVICE_ROLE');
 
     const { searchParams } = new URL(req.url);
-    const table = searchParams.get('table');
-    let sample = null;
+    const table = (searchParams.get('table') || '').trim();
+
+    const base = URL.replace(/\/+$/, ''); // quita slash final
+    const info = { ok: true, hasUrl: !!URL, hasService: !!SERVICE };
+
     if (table) {
-      const { data, error } = await supabase.from(table).select('*').limit(1);
-      if (error) throw error;
-      sample = { rows: data?.length || 0 };
+      const headers = {
+        apikey: SERVICE,
+        Authorization: `Bearer ${SERVICE}`,
+        'Content-Type': 'application/json',
+      };
+      const resp = await fetch(
+        `${base}/rest/v1/${encodeURIComponent(table)}?select=*&limit=1`,
+        { method: 'GET', headers }
+      );
+
+      if (!resp.ok) {
+        const text = await resp.text();
+        info.sample = { error: `HTTP ${resp.status}`, body: text.slice(0, 300) };
+      } else {
+        const data = await resp.json();
+        info.sample = { rows: Array.isArray(data) ? data.length : 0 };
+      }
     }
 
-    return new Response(JSON.stringify({
-      ok: true,
-      hasUrl: !!url,
-      hasAnon: !!anon,
-      hasService: !!service,
-      sample
-    }), { headers: { 'content-type': 'application/json' } });
-  } catch (err) {
-    return new Response(JSON.stringify({ ok: false, error: String(err.message || err) }), {
-      status: 500,
-      headers: { 'content-type': 'application/json' }
+    return new Response(JSON.stringify(info), {
+      headers: { 'content-type': 'application/json' },
     });
+  } catch (err) {
+    return new Response(
+      JSON.stringify({ ok: false, error: String(err?.message || err) }),
+      { status: 500, headers: { 'content-type': 'application/json' } }
+    );
   }
 }
