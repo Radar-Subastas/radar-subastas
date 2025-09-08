@@ -1,10 +1,9 @@
-# Radar Subastas + Supabase (Edge ready)
+# Radar Subastas (Edge + Supabase)
 
-Variables (Cloudflare Pages → Settings → Environment Variables):
-- NEXT_PUBLIC_SUPABASE_URL (Text)
-- NEXT_PUBLIC_SUPABASE_ANON_KEY (Text)
-- SUPABASE_SERVICE_ROLE (Secret)
+- /supabase-test  (estática para verificar NEXT_PUBLIC_*)
+- /api/check-supabase  (Edge runtime; usa SUPABASE_SERVICE_ROLE)
 
-Rutas:
-- /supabase-test  (estática)
-- /api/check-supabase  (Edge runtime)
+Variables en Cloudflare Pages:
+- NEXT_PUBLIC_SUPABASE_URL  (Secret)
+- NEXT_PUBLIC_SUPABASE_ANON_KEY  (Secret)
+- SUPABASE_SERVICE_ROLE  (Secret)
