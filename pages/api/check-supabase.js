@@ -1,9 +1,16 @@
 export const config = { runtime: 'edge' };
 
+const readEnv = (k) =>
+  (typeof process !== 'undefined' &&
+    process.env &&
+    typeof process.env[k] !== 'undefined'
+      ? process.env[k]
+      : undefined);
+
 export default async function handler(req) {
   try {
-    const URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const SERVICE = process.env.SUPABASE_SERVICE_ROLE;
+    const URL = readEnv('NEXT_PUBLIC_SUPABASE_URL');
+    const SERVICE = readEnv('SUPABASE_SERVICE_ROLE');
 
     if (!URL) throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL');
     if (!SERVICE) throw new Error('Missing SUPABASE_SERVICE_ROLE');
@@ -11,7 +18,7 @@ export default async function handler(req) {
     const { searchParams } = new URL(req.url);
     const table = (searchParams.get('table') || '').trim();
 
-    const base = URL.replace(/\/+$/, ''); // quita slash final
+    const base = URL.replace(/\/+$/, '');
     const info = { ok: true, hasUrl: !!URL, hasService: !!SERVICE };
 
     if (table) {
