@@ -1,51 +1,49 @@
 export const runtime = 'edge';
+import { getRequestContext } from '@cloudflare/next-on-pages';
 
-function readEnv(k) {
-  if (globalThis?.__ENV__ && typeof globalThis.__ENV__[k] !== 'undefined') return globalThis.__ENV__[k];
-  if (typeof process !== 'undefined' && process.env && typeof process.env[k] !== 'undefined') return process.env[k];
-  return undefined;
-}
+export async function GET() {
+  const { env } = getRequestContext();
+  const url = env.NEXT_PUBLIC_SUPABASE_URL;
+  const anon = env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-export async function GET(req) {
-  try {
-    const URL = readEnv('NEXT_PUBLIC_SUPABASE_URL');
-    const SERVICE = readEnv('SUPABASE_SERVICE_ROLE');
-    if (!URL) throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL');
-    if (!SERVICE) throw new Error('Missing SUPABASE_SERVICE_ROLE');
-
-    const { searchParams } = new URL(req.url);
-    const table = (searchParams.get('table') || '').trim();
-
-    const base = URL.replace(/\/+$/, '');
-    const info = { ok: true, hasUrl: !!URL, hasService: !!SERVICE };
-
-    if (table) {
-      const headers = {
-        apikey: SERVICE,
-        Authorization: `Bearer ${SERVICE}`,
-        'Content-Type': 'application/json',
-      };
-      const resp = await fetch(`${base}/rest/v1/${encodeURIComponent(table)}?select=*&limit=1`, {
-        method: 'GET',
-        headers,
-      });
-
-      if (!resp.ok) {
-        const text = await resp.text();
-        info.sample = { error: `HTTP ${resp.status}`, body: text.slice(0, 300) };
-      } else {
-        const data = await resp.json();
-        info.sample = { rows: Array.isArray(data) ? data.length : 0 };
+  if (!url || !anon) {
+    return new Response(JSON.stringify({
+      ok: false,
+      error: 'Missing env',
+      details: {
+        NEXT_PUBLIC_SUPABASE_URL: !!url,
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: !!anon,
       }
-    }
-
-    return new Response(JSON.stringify(info), {
-      headers: { 'content-type': 'application/json' },
-    });
-  } catch (err) {
-    return new Response(JSON.stringify({ ok: false, error: String(err?.message || err) }), {
+    }, null, 2), {
       status: 500,
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json; charset=utf-8' },
+    });
+  }
+
+  try {
+    // Hacemos un HEAD contra /rest/v1/ (endpoint típico) para chequear reachability
+    const target = url.replace(/\/+$/, '') + '/rest/v1/';
+    const res = await fetch(target, {
+      method: 'HEAD',
+      headers: { apikey: anon, Authorization: `Bearer ${anon}` }
+    });
+
+    return new Response(JSON.stringify({
+      ok: res.ok,
+      status: res.status,
+      statusText: res.statusText
+    }, null, 2), {
+      status: 200,
+      headers: { 'content-type': 'application/json; charset=utf-8' },
+    });
+  } catch (e) {
+    return new Response(JSON.stringify({
+      ok: false,
+      error: 'Fetch failed',
+      message: String(e)
+    }, null, 2), {
+      status: 500,
+      headers: { 'content-type': 'application/json; charset=utf-8' },
     });
   }
 }
