@@ -1,6 +1,4 @@
-# Wrangler config para Cloudflare Pages + next-on-pages
 name = "radar-subastas"
 pages_build_output_dir = ".vercel/output/static"
-
 compatibility_date = "2024-04-03"
 compatibility_flags = ["nodejs_compat"]
