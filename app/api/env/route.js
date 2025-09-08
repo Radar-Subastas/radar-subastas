@@ -1,17 +1,20 @@
 export const runtime = 'edge';
 
-function readEnv(k) {
-  if (globalThis?.__ENV__ && typeof globalThis.__ENV__[k] !== 'undefined') return globalThis.__ENV__[k];
-  if (typeof process !== 'undefined' && process.env && typeof process.env[k] !== 'undefined') return process.env[k];
-  return undefined;
-}
+// ⚠️ Import propio de next-on-pages para acceder a env en Cloudflare Pages
+import { getRequestContext } from '@cloudflare/next-on-pages';
 
 export async function GET() {
-  const url = !!readEnv('NEXT_PUBLIC_SUPABASE_URL');
-  const anon = !!readEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY');
-  const service = !!readEnv('SUPABASE_SERVICE_ROLE');
+  const { env } = getRequestContext();
 
-  return new Response(JSON.stringify({ ok: true, url, anon, service }), {
-    headers: { 'content-type': 'application/json' },
+  // Solo devolvemos “presencia” para no exponer secretos.
+  const result = {
+    NEXT_PUBLIC_SUPABASE_URL: !!env.NEXT_PUBLIC_SUPABASE_URL ? 'OK' : 'MISSING',
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: !!env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'OK' : 'MISSING',
+    SUPABASE_SERVICE_ROLE: !!env.SUPABASE_SERVICE_ROLE ? 'OK' : 'MISSING',
+  };
+
+  return new Response(JSON.stringify(result, null, 2), {
+    status: 200,
+    headers: { 'content-type': 'application/json; charset=utf-8' },
   });
 }
